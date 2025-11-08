@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudopti"
+version = "2.0.0"
+description = "AWS Cost Monitoring and Optimization Tool - Similar to Prowler but for cost optimization"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "CloudOpti Team", email = "cloudopti@example.com"}
+]
+keywords = ["aws", "cost", "optimization", "monitoring", "cloudwatch"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: System :: Systems Administration",
+    "Topic :: System :: Monitoring",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "boto3>=1.28.0",
+    "openpyxl>=3.1.0",
+    "tabulate>=0.9.0",
+    "python-dateutil>=2.8.2",
+]
+
+[project.scripts]
+opti = "cloudopti.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/testuser/cloudopti"
+Documentation = "https://github.com/testuser/cloudopti#readme"
+Repository = "https://github.com/testuser/cloudopti"
+Issues = "https://github.com/testuser/cloudopti/issues"
+
+[tool.setuptools]
+packages = ["cloudopti"]
+
+[tool.setuptools.package-data]
+cloudopti = ["*.py"]
+
