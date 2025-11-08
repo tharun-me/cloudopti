@@ -600,6 +600,272 @@ class ExcelExporter:
         ws.column_dimensions['E'].width = 12
         ws.column_dimensions['F'].width = 20
     
+    def create_route53_sheet(self, wb, hosted_zones):
+        """Create Route53 hosted zones sheet"""
+        ws = wb.create_sheet("Route53")
+        
+        # Title
+        ws['A1'] = "Route53 Hosted Zones - Detailed Analysis"
+        ws['A1'].font = self.title_font
+        ws.merge_cells('A1:E1')
+        
+        # Headers
+        headers = [
+            'Hosted Zone ID', 'Name', 'Private Zone', 'Record Count'
+        ]
+        
+        row = 3
+        col = 1
+        for header in headers:
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.fill = self.header_fill
+            cell.font = self.header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = self.border
+            col += 1
+        
+        # Data rows
+        row = 4
+        for zone in hosted_zones:
+            data = [
+                zone['HostedZoneId'],
+                zone['Name'],
+                zone['PrivateZone'],
+                zone['ResourceRecordSetCount']
+            ]
+            
+            col = 1
+            for value in data:
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.border = self.border
+                col += 1
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 20
+        ws.column_dimensions['B'].width = 30
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 12
+    
+    def create_secrets_manager_sheet(self, wb, secrets):
+        """Create Secrets Manager secrets sheet"""
+        ws = wb.create_sheet("SecretsManager")
+        
+        # Title
+        ws['A1'] = "Secrets Manager Secrets - Detailed Analysis"
+        ws['A1'].font = self.title_font
+        ws.merge_cells('A1:F1')
+        
+        # Headers
+        headers = [
+            'Secret Name', 'ARN', 'Region', 'Description', 'Last Changed', 'Last Accessed'
+        ]
+        
+        row = 3
+        col = 1
+        for header in headers:
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.fill = self.header_fill
+            cell.font = self.header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = self.border
+            col += 1
+        
+        # Data rows
+        row = 4
+        for secret in secrets:
+            data = [
+                secret['SecretName'],
+                secret['ARN'],
+                secret['Region'],
+                secret['Description'],
+                secret['LastChangedDate'].strftime('%Y-%m-%d') if isinstance(secret['LastChangedDate'], datetime) else secret['LastChangedDate'],
+                secret['LastAccessedDate'].strftime('%Y-%m-%d') if isinstance(secret['LastAccessedDate'], datetime) else secret['LastAccessedDate']
+            ]
+            
+            col = 1
+            for value in data:
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.border = self.border
+                col += 1
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 50
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 30
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+    
+    def create_systems_manager_sheet(self, wb, instances):
+        """Create Systems Manager instances sheet"""
+        ws = wb.create_sheet("SystemsManager")
+        
+        # Title
+        ws['A1'] = "Systems Manager Instances - Detailed Analysis"
+        ws['A1'].font = self.title_font
+        ws.merge_cells('A1:G1')
+        
+        # Headers
+        headers = [
+            'Instance ID', 'Computer Name', 'Platform Type', 'Platform Version', 'Region', 'Ping Status', 'Last Ping'
+        ]
+        
+        row = 3
+        col = 1
+        for header in headers:
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.fill = self.header_fill
+            cell.font = self.header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = self.border
+            col += 1
+        
+        # Data rows
+        row = 4
+        for instance in instances:
+            data = [
+                instance['InstanceId'],
+                instance['ComputerName'],
+                instance['PlatformType'],
+                instance['PlatformVersion'],
+                instance['Region'],
+                instance['PingStatus'],
+                instance['LastPingDateTime'].strftime('%Y-%m-%d') if isinstance(instance['LastPingDateTime'], datetime) else instance['LastPingDateTime']
+            ]
+            
+            col = 1
+            for value in data:
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.border = self.border
+                col += 1
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 20
+        ws.column_dimensions['B'].width = 25
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 15
+    
+    def create_cloudwatch_sheet(self, wb, alarms):
+        """Create CloudWatch alarms sheet"""
+        ws = wb.create_sheet("CloudWatch")
+        
+        # Title
+        ws['A1'] = "CloudWatch Alarms - Detailed Analysis"
+        ws['A1'].font = self.title_font
+        ws.merge_cells('A1:F1')
+        
+        # Headers
+        headers = [
+            'Alarm Name', 'Namespace', 'Metric Name', 'State', 'Region', 'Last Updated'
+        ]
+        
+        row = 3
+        col = 1
+        for header in headers:
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.fill = self.header_fill
+            cell.font = self.header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = self.border
+            col += 1
+        
+        # Data rows
+        row = 4
+        for alarm in alarms:
+            data = [
+                alarm['AlarmName'],
+                alarm['Namespace'],
+                alarm['MetricName'],
+                alarm['StateValue'],
+                alarm['Region'],
+                alarm['StateUpdatedTimestamp'].strftime('%Y-%m-%d %H:%M') if isinstance(alarm['StateUpdatedTimestamp'], datetime) else alarm['StateUpdatedTimestamp']
+            ]
+            
+            col = 1
+            for value in data:
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.border = self.border
+                col += 1
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 25
+        ws.column_dimensions['C'].width = 20
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 18
+    
+    def create_guardduty_sheet(self, wb, detectors):
+        """Create GuardDuty detectors sheet"""
+        ws = wb.create_sheet("GuardDuty")
+        
+        # Title
+        ws['A1'] = "GuardDuty Detectors - Detailed Analysis"
+        ws['A1'].font = self.title_font
+        ws.merge_cells('A1:F1')
+        
+        # Headers
+        headers = [
+            'Detector ID', 'Region', 'Status', 'Created At', 'Finding Publishing Frequency'
+        ]
+        
+        row = 3
+        col = 1
+        for header in headers:
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.fill = self.header_fill
+            cell.font = self.header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = self.border
+            col += 1
+        
+        # Data rows
+        row = 4
+        for detector in detectors:
+            data = [
+                detector['DetectorId'],
+                detector['Region'],
+                detector['Status'],
+                detector['CreatedAt'].strftime('%Y-%m-%d') if isinstance(detector['CreatedAt'], datetime) else detector['CreatedAt'],
+                detector['FindingPublishingFrequency']
+            ]
+            
+            col = 1
+            for value in data:
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.border = self.border
+                col += 1
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 25
+    
     def export(self, costs_by_service, total_cost, start_date, end_date, recommendations,
                resources=None, metrics_data=None, analyses=None, resource_costs=None):
         """Export comprehensive report to Excel file"""
@@ -648,6 +914,26 @@ class ExcelExporter:
             # ELB sheet
             if resources.get('ELB'):
                 self.create_elb_sheet(wb, resources['ELB'])
+            
+            # Route53 sheet
+            if resources.get('Route53'):
+                self.create_route53_sheet(wb, resources['Route53'])
+            
+            # SecretsManager sheet
+            if resources.get('SecretsManager'):
+                self.create_secrets_manager_sheet(wb, resources['SecretsManager'])
+            
+            # SystemsManager sheet
+            if resources.get('SystemsManager'):
+                self.create_systems_manager_sheet(wb, resources['SystemsManager'])
+            
+            # CloudWatch sheet
+            if resources.get('CloudWatch'):
+                self.create_cloudwatch_sheet(wb, resources['CloudWatch'])
+            
+            # GuardDuty sheet
+            if resources.get('GuardDuty'):
+                self.create_guardduty_sheet(wb, resources['GuardDuty'])
         
         # Save file
         filename = f"aws_cost_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"

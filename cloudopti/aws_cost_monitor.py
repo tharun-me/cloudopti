@@ -9,7 +9,7 @@ from cloudopti.resource_discovery import ResourceDiscovery
 from cloudopti.cloudwatch_metrics import CloudWatchMetrics
 from cloudopti.comprehensive_metrics import ComprehensiveMetrics
 from cloudopti.instance_analyzer import InstanceAnalyzer
-from cloudopti.service_mapper import get_services_to_discover
+from cloudopti.service_mapper import get_services_to_discover, SERVICE_MAP
 from cloudopti.cost_mapper import CostMapper
 from cloudopti.enhanced_recommendations import EnhancedRecommendations
 
@@ -241,8 +241,50 @@ class AWSCostMonitor:
         self.display.show_table(costs_by_service, total_cost)
         
         # Discover resources based on services in the bill
-        services_to_discover = get_services_to_discover(costs_by_service)
-        resources = self.resource_discovery.discover_all_resources(services_to_discover)
+        print("\n" + "="*60)
+        print("🔍 ANALYZING BILL FOR DISCOVERABLE SERVICES")
+        print("="*60)
+        
+        services_to_discover, service_mapping = get_services_to_discover(costs_by_service)
+        
+        # Show which services from bill can be discovered
+        discoverable_services = []
+        non_discoverable_services = []
+        
+        for service_name, cost in costs_by_service.items():
+            if service_name in ['Tax', 'AWS Support (Business)', 'AWS Support (Developer)', 
+                               'AWS Support (Enterprise)', 'AWS Support (Basic)']:
+                continue
+            
+            if service_name in SERVICE_MAP:
+                discovery_key = SERVICE_MAP[service_name]
+                discoverable_services.append({
+                    'bill_name': service_name,
+                    'cost': cost,
+                    'discovery_key': discovery_key
+                })
+            else:
+                non_discoverable_services.append({
+                    'bill_name': service_name,
+                    'cost': cost
+                })
+        
+        if discoverable_services:
+            print("\n✅ Discoverable services in bill:")
+            for svc in discoverable_services:
+                print(f"  • {svc['bill_name']} (${svc['cost']:.2f}) → Will discover {svc['discovery_key']} resources")
+        
+        if non_discoverable_services:
+            print("\n⚠️  Services in bill without resource discovery:")
+            for svc in non_discoverable_services:
+                print(f"  • {svc['bill_name']} (${svc['cost']:.2f}) - No resource discovery available")
+        
+        if not services_to_discover:
+            print("\n⚠️  No discoverable services found in the bill.")
+            resources = {}
+        else:
+            print(f"\n📋 Will discover resources for: {', '.join(services_to_discover)}")
+            resources = self.resource_discovery.discover_all_resources(services_to_discover, service_mapping)
         
         # Map actual costs to resources
         print("\n" + "="*60)
@@ -322,12 +364,52 @@ class AWSCostMonitor:
         print("="*60)
         print(f"\n📊 Report includes:")
         print(f"  • Summary sheet with cost breakdown")
+        
+        # Only show sheets for services that were discovered (based on bill)
+        sheet_count = 0
         if resources.get('EC2'):
             print(f"  • EC2 sheet with {len(resources['EC2'])} instances and optimization recommendations")
+            sheet_count += 1
         if resources.get('EKS'):
             print(f"  • EKS sheet with {len(resources['EKS'])} clusters")
+            sheet_count += 1
         if resources.get('S3'):
             print(f"  • S3 sheet with {len(resources['S3'])} buckets")
+            sheet_count += 1
         if resources.get('VPC'):
             print(f"  • VPC sheet with {len(resources['VPC'])} VPCs")
+            sheet_count += 1
+        if resources.get('RDS'):
+            print(f"  • RDS sheet with {len(resources['RDS'])} instances")
+            sheet_count += 1
+        if resources.get('Lambda'):
+            print(f"  • Lambda sheet with {len(resources['Lambda'])} functions")
+            sheet_count += 1
+        if resources.get('DynamoDB'):
+            print(f"  • DynamoDB sheet with {len(resources['DynamoDB'])} tables")
+            sheet_count += 1
+        if resources.get('ELB'):
+            print(f"  • ELB sheet with {len(resources['ELB'])} load balancers")
+            sheet_count += 1
+        if resources.get('Route53'):
+            print(f"  • Route53 sheet with {len(resources['Route53'])} hosted zones")
+            sheet_count += 1
+        if resources.get('SecretsManager'):
+            print(f"  • SecretsManager sheet with {len(resources['SecretsManager'])} secrets")
+            sheet_count += 1
+        if resources.get('SystemsManager'):
+            print(f"  • SystemsManager sheet with {len(resources['SystemsManager'])} instances")
+            sheet_count += 1
+        if resources.get('CloudWatch'):
+            print(f"  • CloudWatch sheet with {len(resources['CloudWatch'])} alarms")
+            sheet_count += 1
+        if resources.get('GuardDuty'):
+            print(f"  • GuardDuty sheet with {len(resources['GuardDuty'])} detectors")
+            sheet_count += 1
+        
+        if sheet_count == 0:
+            print(f"  • No resource sheets (no discoverable services in bill)")
+        else:
+            print(f"\n  Total: {sheet_count + 1} sheets (1 summary + {sheet_count} service sheets)")
+        
         print("="*60 + "\n")

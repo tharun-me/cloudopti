@@ -245,41 +245,64 @@ class ResourceDiscovery:
         print(f"  ✓ Found {len(instances)} RDS instances")
         return instances
     
-    def discover_all_resources(self, services_to_discover=None):
+    def discover_all_resources(self, services_to_discover=None, service_mapping=None):
         """Discover all resources based on services in the bill"""
         print("\n" + "="*60)
-        print("🔍 RESOURCE DISCOVERY")
+        print("🔍 RESOURCE DISCOVERY (Based on Bill)")
         print("="*60)
         
-        # If no services specified, discover all
-        if services_to_discover is None:
-            services_to_discover = ['EC2', 'EKS', 'S3', 'VPC', 'RDS']
+        # If no services specified, don't discover anything
+        if services_to_discover is None or len(services_to_discover) == 0:
+            print("⚠️  No services found in bill to discover resources for.")
+            return {}
+        
+        # Show which services from the bill will be discovered (in bill order)
+        if service_mapping:
+            print("\n📋 Services in bill that will be analyzed (ordered by cost):")
+            for discovery_key in services_to_discover:
+                bill_services = service_mapping.get(discovery_key, [])
+                # Sort bill services by cost (highest first)
+                bill_services_sorted = sorted(bill_services, key=lambda x: x['cost'], reverse=True)
+                for bill_service in bill_services_sorted:
+                    print(f"  • {bill_service['bill_name']} (${bill_service['cost']:.2f}) → {discovery_key}")
+        
+        print(f"\n🔍 Discovering resources for: {', '.join(services_to_discover)} (in bill order)")
         
         resources = {}
         
-        if 'EC2' in services_to_discover:
-            resources['EC2'] = self.discover_ec2_instances()
+        # Discover resources in the order they appear in the bill (by cost, highest first)
+        # This ensures discovery happens in bill order
+        for discovery_key in services_to_discover:
+            if discovery_key == 'EC2':
+                resources['EC2'] = self.discover_ec2_instances()
+            elif discovery_key == 'EKS':
+                resources['EKS'] = self.discover_eks_clusters()
+            elif discovery_key == 'RDS':
+                resources['RDS'] = self.discover_rds_instances()
+            elif discovery_key == 'VPC':
+                resources['VPC'] = self.discover_vpcs()
+            elif discovery_key == 'S3':
+                resources['S3'] = self.discover_s3_buckets()
+            elif discovery_key == 'Lambda':
+                resources['Lambda'] = self.discover_lambda_functions()
+            elif discovery_key == 'DynamoDB':
+                resources['DynamoDB'] = self.discover_dynamodb_tables()
+            elif discovery_key == 'ELB':
+                resources['ELB'] = self.discover_load_balancers()
+            elif discovery_key == 'Route53':
+                resources['Route53'] = self.discover_route53_hosted_zones()
+            elif discovery_key == 'SecretsManager':
+                resources['SecretsManager'] = self.discover_secrets_manager_secrets()
+            elif discovery_key == 'SystemsManager':
+                resources['SystemsManager'] = self.discover_systems_manager_instances()
+            elif discovery_key == 'CloudWatch':
+                resources['CloudWatch'] = self.discover_cloudwatch_alarms()
+            elif discovery_key == 'GuardDuty':
+                resources['GuardDuty'] = self.discover_guardduty_detectors()
         
-        if 'EKS' in services_to_discover:
-            resources['EKS'] = self.discover_eks_clusters()
-        
-        if 'S3' in services_to_discover:
-            resources['S3'] = self.discover_s3_buckets()
-        
-        if 'VPC' in services_to_discover:
-            resources['VPC'] = self.discover_vpcs()
-        
-        if 'RDS' in services_to_discover:
-            resources['RDS'] = self.discover_rds_instances()
-        
-        if 'Lambda' in services_to_discover:
-            resources['Lambda'] = self.discover_lambda_functions()
-        
-        if 'DynamoDB' in services_to_discover:
-            resources['DynamoDB'] = self.discover_dynamodb_tables()
-        
-        if 'ELB' in services_to_discover:
-            resources['ELB'] = self.discover_load_balancers()
+        # Show summary
+        total_resources = sum(len(v) for v in resources.values())
+        print(f"\n✅ Discovery complete: Found {total_resources} total resources across {len(resources)} services")
         
         return resources
     
@@ -373,4 +396,145 @@ class ResourceDiscovery:
         
         print(f"  ✓ Found {len(load_balancers)} Load Balancers")
         return load_balancers
+    
+    def discover_route53_hosted_zones(self):
+        """Discover all Route53 hosted zones"""
+        print("🔍 Discovering Route53 hosted zones...")
+        hosted_zones = []
+        
+        try:
+            route53 = boto3.client('route53')
+            response = route53.list_hosted_zones()
+            
+            for zone in response.get('HostedZones', []):
+                zone_data = {
+                    'HostedZoneId': zone['Id'].split('/')[-1],
+                    'Name': zone['Name'],
+                    'PrivateZone': zone.get('Config', {}).get('PrivateZone', False),
+                    'ResourceRecordSetCount': zone.get('ResourceRecordSetCount', 0),
+                }
+                hosted_zones.append(zone_data)
+        except ClientError:
+            pass
+        except Exception:
+            pass
+        
+        print(f"  ✓ Found {len(hosted_zones)} Route53 hosted zones")
+        return hosted_zones
+    
+    def discover_secrets_manager_secrets(self):
+        """Discover all Secrets Manager secrets across regions"""
+        print("🔍 Discovering Secrets Manager secrets...")
+        secrets = []
+        
+        for region in self.regions:
+            try:
+                sm = boto3.client('secretsmanager', region_name=region)
+                response = sm.list_secrets()
+                
+                for secret in response.get('SecretList', []):
+                    secret_data = {
+                        'SecretName': secret.get('Name', 'N/A'),
+                        'ARN': secret.get('ARN', 'N/A'),
+                        'Region': region,
+                        'Description': secret.get('Description', 'N/A'),
+                        'LastChangedDate': secret.get('LastChangedDate', datetime.now()),
+                        'LastAccessedDate': secret.get('LastAccessedDate', datetime.now()),
+                    }
+                    secrets.append(secret_data)
+            except ClientError:
+                continue
+            except Exception:
+                continue
+        
+        print(f"  ✓ Found {len(secrets)} Secrets Manager secrets")
+        return secrets
+    
+    def discover_systems_manager_instances(self):
+        """Discover all Systems Manager managed instances"""
+        print("🔍 Discovering Systems Manager instances...")
+        instances = []
+        
+        for region in self.regions:
+            try:
+                ssm = boto3.client('ssm', region_name=region)
+                response = ssm.describe_instance_information()
+                
+                for instance_info in response.get('InstanceInformationList', []):
+                    instance_data = {
+                        'InstanceId': instance_info.get('InstanceId', 'N/A'),
+                        'ComputerName': instance_info.get('ComputerName', 'N/A'),
+                        'PlatformType': instance_info.get('PlatformType', 'N/A'),
+                        'PlatformVersion': instance_info.get('PlatformVersion', 'N/A'),
+                        'Region': region,
+                        'PingStatus': instance_info.get('PingStatus', 'N/A'),
+                        'LastPingDateTime': instance_info.get('LastPingDateTime', datetime.now()),
+                    }
+                    instances.append(instance_data)
+            except ClientError:
+                continue
+            except Exception:
+                continue
+        
+        print(f"  ✓ Found {len(instances)} Systems Manager instances")
+        return instances
+    
+    def discover_cloudwatch_alarms(self):
+        """Discover all CloudWatch alarms across regions"""
+        print("🔍 Discovering CloudWatch alarms...")
+        alarms = []
+        
+        for region in self.regions:
+            try:
+                cw = boto3.client('cloudwatch', region_name=region)
+                response = cw.describe_alarms()
+                
+                for alarm in response.get('MetricAlarms', []):
+                    alarm_data = {
+                        'AlarmName': alarm.get('AlarmName', 'N/A'),
+                        'Namespace': alarm.get('Namespace', 'N/A'),
+                        'MetricName': alarm.get('MetricName', 'N/A'),
+                        'StateValue': alarm.get('StateValue', 'N/A'),
+                        'StateUpdatedTimestamp': alarm.get('StateUpdatedTimestamp', datetime.now()),
+                        'Region': region,
+                    }
+                    alarms.append(alarm_data)
+            except ClientError:
+                continue
+            except Exception:
+                continue
+        
+        print(f"  ✓ Found {len(alarms)} CloudWatch alarms")
+        return alarms
+    
+    def discover_guardduty_detectors(self):
+        """Discover all GuardDuty detectors across regions"""
+        print("🔍 Discovering GuardDuty detectors...")
+        detectors = []
+        
+        for region in self.regions:
+            try:
+                gd = boto3.client('guardduty', region_name=region)
+                response = gd.list_detectors()
+                
+                for detector_id in response.get('DetectorIds', []):
+                    try:
+                        detector_detail = gd.get_detector(DetectorId=detector_id)
+                        detector_data = {
+                            'DetectorId': detector_id,
+                            'Region': region,
+                            'Status': detector_detail.get('Status', 'N/A'),
+                            'CreatedAt': detector_detail.get('CreatedAt', datetime.now()),
+                            'FindingPublishingFrequency': detector_detail.get('FindingPublishingFrequency', 'N/A'),
+                        }
+                        detectors.append(detector_data)
+                    except Exception:
+                        continue
+            except ClientError:
+                continue
+            except Exception:
+                continue
+        
+        print(f"  ✓ Found {len(detectors)} GuardDuty detectors")
+        return detectors
 
